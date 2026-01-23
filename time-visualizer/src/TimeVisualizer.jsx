@@ -341,8 +341,9 @@ const TimeVisualizer = () => {
 
   return (
     <div 
-        className={`min-h-screen flex flex-col items-center justify-center font-sans select-none overflow-hidden relative transition-colors duration-1000 
+        className={`flex flex-col items-center justify-center font-sans select-none overflow-hidden relative transition-colors duration-1000 
         ${isIdleMode ? 'bg-slate-950' : (isUrgent ? 'bg-red-50' : 'bg-slate-50')}`}
+        style={{ minHeight: 'var(--app-height, 100vh)' }}
         onClick={handleInteraction}
     >
       
