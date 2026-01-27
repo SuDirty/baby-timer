@@ -252,6 +252,13 @@ const TimeVisualizer = () => {
   const secondRingRadius = 75;
   const secondRingStrokeWidth = 6;
 
+  // Helper function to calculate effective seconds for display
+  const getEffectiveSeconds = () => {
+    if (timeLeft <= 0) return 0;
+    const secondsValue = timeLeft % 60;
+    return (secondsValue === 0) ? 60 : secondsValue;
+  };
+
   // --- 渲染主要視覺 ---
   const renderVisuals = () => {
     const elements = [];
@@ -275,8 +282,7 @@ const TimeVisualizer = () => {
     // Store seconds ring for rendering at the end (top layer)
     let secondsRingElement = null;
     if (timeLeft > 0) {
-        const secondsValue = timeLeft % 60;
-        const effectiveSeconds = (timeLeft > 0 && secondsValue === 0) ? 60 : secondsValue;
+        const effectiveSeconds = getEffectiveSeconds();
         const secondsProgress = effectiveSeconds / 60;
         const secondsCircumference = 2 * Math.PI * secondRingRadius;
         const secondsDashOffset = secondsCircumference * (1 - secondsProgress);
@@ -418,14 +424,16 @@ const TimeVisualizer = () => {
               let emojiY = 60;
               const emojiSize = 200;
 
-              // Only move emoji along seconds ring when in timer mode (timeLeft > 0)
-              if (!isIdleMode && !showSetup && timeLeft > 0) {
-                const secondsValue = timeLeft % 60;
-                const effectiveSeconds = (timeLeft > 0 && secondsValue === 0) ? 60 : secondsValue;
+              // Check if in active timer mode (running and not in idle/setup)
+              const isActiveTimerMode = !isIdleMode && !showSetup && timeLeft > 0;
+
+              // Only move emoji along seconds ring when in active timer mode
+              if (isActiveTimerMode) {
+                const effectiveSeconds = getEffectiveSeconds();
                 
                 // Calculate angle in degrees (0° at 12 o'clock, clockwise)
                 const angleDegrees = (effectiveSeconds / 60) * 360;
-                // Convert to radians and adjust for SVG coordinate system (0° at 3 o'clock)
+                // Convert to radians and adjust: SVG has 0° at 3 o'clock, so subtract 90° to start at 12 o'clock
                 const angleRadians = (angleDegrees - 90) * (Math.PI / 180);
                 
                 // Calculate position on seconds ring
