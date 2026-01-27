@@ -252,6 +252,13 @@ const TimeVisualizer = () => {
   const secondRingRadius = 75;
   const secondRingStrokeWidth = 6;
 
+  // Helper function to calculate effective seconds for display
+  const getEffectiveSeconds = () => {
+    if (timeLeft <= 0) return 0;
+    const secondsValue = timeLeft % 60;
+    return (secondsValue === 0) ? 60 : secondsValue;
+  };
+
   // --- 渲染主要視覺 ---
   const renderVisuals = () => {
     const elements = [];
@@ -272,15 +279,16 @@ const TimeVisualizer = () => {
     }
 
     // --- B. 計時模式 ---
+    // Store seconds ring for rendering at the end (top layer)
+    let secondsRingElement = null;
     if (timeLeft > 0) {
-        const secondsValue = timeLeft % 60;
-        const effectiveSeconds = (timeLeft > 0 && secondsValue === 0) ? 60 : secondsValue;
+        const effectiveSeconds = getEffectiveSeconds();
         const secondsProgress = effectiveSeconds / 60;
         const secondsCircumference = 2 * Math.PI * secondRingRadius;
         const secondsDashOffset = secondsCircumference * (1 - secondsProgress);
         const secondsColor = isUrgent ? '#EF4444' : '#64748B';
 
-        elements.push(
+        secondsRingElement = (
           <g key="seconds-ring" className="z-20">
             <circle cx={center.x} cy={center.y} r={secondRingRadius} fill="none" stroke={secondsColor} strokeWidth={secondRingStrokeWidth} strokeOpacity="0.1" />
             <circle cx={center.x} cy={center.y} r={secondRingRadius} fill="none" stroke={secondsColor} strokeWidth={secondRingStrokeWidth} strokeDasharray={secondsCircumference} strokeDashoffset={secondsDashOffset} strokeLinecap="round" className={`transition-all duration-1000 linear origin-center -rotate-90 ${isUrgent ? 'animate-heartbeat' : ''}`} style={{ transition: 'stroke-dashoffset 1s linear' }} />
@@ -330,6 +338,12 @@ const TimeVisualizer = () => {
         );
       }
     }
+    
+    // Add seconds ring at the end (top layer)
+    if (secondsRingElement) {
+      elements.push(secondsRingElement);
+    }
+    
     return elements;
   };
 
@@ -403,33 +417,67 @@ const TimeVisualizer = () => {
           <svg className="w-full h-full transform drop-shadow-xl" viewBox="0 0 320 320">
             {renderVisuals()}
             
-            <foreignObject x={isIdleMode ? "0" : "60"} y={isIdleMode ? "0" : "60"} width={isIdleMode ? "320" : "200"} height={isIdleMode ? "320" : "200"}>
-              <div className="w-full h-full flex items-center justify-center flex-col">
-                {isIdleMode ? (
-                   <div className="font-mono font-bold flex flex-col items-center justify-center">
-                     <span className="text-7xl tracking-widest text-slate-100 drop-shadow-lg leading-tight">{formatClockTime(now)}</span>
-                     <span className="text-lg text-slate-400 mt-2 font-sans tracking-wide">{now.toLocaleDateString([], { month: 'long', day: 'numeric', weekday: 'short' })}</span>
-                   </div>
-                ) : (
-                   <>
-                       <div className="mb-2">
-                        {isFinished ? (
-                            <div className="text-6xl animate-spin-slow">🐰</div>
-                            ) : isRunning ? (
-                            isUrgent ? (
-                                <div className="text-7xl animate-wobble-fast">🏃</div>
-                            ) : (
-                                <div className="text-6xl animate-pulse">🐢</div>
-                            )
-                            ) : (
-                            <div className="text-6xl opacity-80">😴</div>
-                            )
-                        }
-                       </div>
-                   </>
-                )}
-              </div>
-            </foreignObject>
+            {(() => {
+              // Calculate emoji position based on seconds hand
+              const center = { x: 160, y: 160 };
+              let emojiX = 60;
+              let emojiY = 60;
+              const emojiSize = 200;
+
+              // Check if in active timer mode (running and not in idle/setup)
+              const isActiveTimerMode = !isIdleMode && !showSetup && timeLeft > 0;
+
+              // Only move emoji along seconds ring when in active timer mode
+              if (isActiveTimerMode) {
+                const effectiveSeconds = getEffectiveSeconds();
+                
+                // Calculate angle in degrees (0° at 12 o'clock, clockwise)
+                const angleDegrees = (effectiveSeconds / 60) * 360;
+                // Convert to radians and adjust: SVG has 0° at 3 o'clock, so subtract 90° to start at 12 o'clock
+                const angleRadians = (angleDegrees - 90) * (Math.PI / 180);
+                
+                // Calculate position on seconds ring
+                const emojiCenterX = center.x + secondRingRadius * Math.cos(angleRadians);
+                const emojiCenterY = center.y + secondRingRadius * Math.sin(angleRadians);
+                
+                // Adjust for foreignObject dimensions (center the emoji)
+                emojiX = emojiCenterX - emojiSize / 2;
+                emojiY = emojiCenterY - emojiSize / 2;
+              } else if (isIdleMode) {
+                emojiX = 0;
+                emojiY = 0;
+                return (
+                  <foreignObject x="0" y="0" width="320" height="320">
+                    <div className="w-full h-full flex items-center justify-center flex-col">
+                      <div className="font-mono font-bold flex flex-col items-center justify-center">
+                        <span className="text-7xl tracking-widest text-slate-100 drop-shadow-lg leading-tight">{formatClockTime(now)}</span>
+                        <span className="text-lg text-slate-400 mt-2 font-sans tracking-wide">{now.toLocaleDateString([], { month: 'long', day: 'numeric', weekday: 'short' })}</span>
+                      </div>
+                    </div>
+                  </foreignObject>
+                );
+              }
+
+              return (
+                <foreignObject x={emojiX} y={emojiY} width={emojiSize} height={emojiSize}>
+                  <div className="w-full h-full flex items-center justify-center flex-col">
+                    <div className="mb-2">
+                      {isFinished ? (
+                        <div className="text-6xl animate-spin-slow">🐰</div>
+                      ) : isRunning ? (
+                        isUrgent ? (
+                          <div className="text-7xl animate-wobble-fast">🏃</div>
+                        ) : (
+                          <div className="text-6xl animate-pulse">🐢</div>
+                        )
+                      ) : (
+                        <div className="text-6xl opacity-80">😴</div>
+                      )}
+                    </div>
+                  </div>
+                </foreignObject>
+              );
+            })()}
           </svg>
         </div>
 
