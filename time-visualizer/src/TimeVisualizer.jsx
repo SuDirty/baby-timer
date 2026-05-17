@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Clock, Lock, Pause, Play, RotateCcw, Settings, Unlock, Volume2, VolumeX } from 'lucide-react';
 import BackgroundSprites from './components/BackgroundSprites';
 import SetupPanel from './components/SetupPanel';
+import SurpriseEventOverlay from './components/SurpriseEventOverlay';
 import TimerVisual from './components/TimerVisual';
 import UnlockChallenge from './components/UnlockChallenge';
 import {
@@ -32,6 +33,10 @@ const createChallenge = () => {
   const b = Math.floor(Math.random() * 8) + 2;
   return { q: `${a} × ${b} = ?`, answer: a * b };
 };
+
+const SURPRISE_EVENTS = ['cat-rain', 'elephant-migration', 'star-burst'];
+const SURPRISE_EVENT_CHANCE = 0.45;
+const SURPRISE_EVENT_DURATION_MS = 3600;
 
 const getRandomAnimal = (excludedAnimals = []) => {
   const candidates = runnerAnimalIds.filter((animal) => !excludedAnimals.includes(animal));
@@ -101,6 +106,7 @@ const TimeVisualizer = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [hasLoadedCachedState, setHasLoadedCachedState] = useState(false);
   const [runnerAnimal, setRunnerAnimal] = useState(() => getRandomAnimal());
+  const [surpriseEvent, setSurpriseEvent] = useState(null);
   const [showUnlockChallenge, setShowUnlockChallenge] = useState(false);
   const [challenge, setChallenge] = useState(() => createChallenge());
   const [inputAnswer, setInputAnswer] = useState('');
@@ -137,6 +143,7 @@ const TimeVisualizer = () => {
 
   const isUrgent = isRunning && timeLeft <= 60 && timeLeft > 0;
   const lastRelayCountRef = useRef(0);
+  const surpriseEventIdRef = useRef(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -192,7 +199,20 @@ const TimeVisualizer = () => {
     const relaySteps = relayCount - lastRelayCountRef.current;
     lastRelayCountRef.current = relayCount;
     setRunnerAnimal((currentAnimal) => advanceRunnerAnimalBy(currentAnimal, relaySteps));
+
+    if (Math.random() < SURPRISE_EVENT_CHANCE) {
+      const type = SURPRISE_EVENTS[Math.floor(Math.random() * SURPRISE_EVENTS.length)];
+      surpriseEventIdRef.current += 1;
+      setSurpriseEvent({ id: surpriseEventIdRef.current, type });
+    }
   }, [isRunning, showSetup, timeLeft, totalTime]);
+
+  useEffect(() => {
+    if (!surpriseEvent) return undefined;
+
+    const timeout = window.setTimeout(() => setSurpriseEvent(null), SURPRISE_EVENT_DURATION_MS);
+    return () => window.clearTimeout(timeout);
+  }, [surpriseEvent]);
 
   useEffect(() => {
     if (isFinished) resetIdleTimer();
@@ -205,6 +225,7 @@ const TimeVisualizer = () => {
     setShowSetup(false);
     setIsLocked(false);
     setRunnerAnimal(getRandomAnimal());
+    setSurpriseEvent(null);
     lastRelayCountRef.current = 0;
     start(duration);
   };
@@ -212,6 +233,7 @@ const TimeVisualizer = () => {
   const handleReset = () => {
     reset();
     setRunnerAnimal(getRandomAnimal());
+    setSurpriseEvent(null);
     lastRelayCountRef.current = 0;
     resetIdleTimer();
   };
@@ -280,6 +302,7 @@ const TimeVisualizer = () => {
       {isUrgent && <div className="pointer-events-none absolute inset-0 animate-pulse bg-red-100 opacity-20" />}
 
       <BackgroundSprites isIdleMode={isIdleMode} />
+      <SurpriseEventOverlay event={isIdleMode ? null : surpriseEvent} />
 
       <div className="z-10 flex w-full max-w-md flex-col items-center p-4">
         {!isLocked && !isIdleMode && (
