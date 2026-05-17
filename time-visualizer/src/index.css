@@ -84,6 +84,37 @@ button {
   50% { transform: rotate(5deg); }
 }
 
+@keyframes run-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-6px) rotate(3deg); }
+}
+
+@keyframes sprint {
+  0%, 100% { transform: translateX(-3px) rotate(-8deg) scale(1.03); }
+  50% { transform: translateX(5px) rotate(8deg) scale(1.08); }
+}
+
+@keyframes celebrate-pop {
+  0%, 100% { transform: scale(1) rotate(-5deg); }
+  50% { transform: scale(1.18) rotate(8deg); }
+}
+
+@keyframes twinkle {
+  0%, 100% { transform: scale(0.9); opacity: 0.5; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-8px) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(52px) rotate(28deg); opacity: 0; }
+}
+
+@keyframes ribbon-sway {
+  0%, 100% { transform: translateY(0) rotate(12deg); }
+  50% { transform: translateY(16px) rotate(-10deg); }
+}
+
 .animate-spin-slow { animation: spin-slow 3s linear infinite; }
 .animate-float-slow { animation: float-slow 6s ease-in-out infinite; }
 .animate-float-medium { animation: float-medium 5s ease-in-out infinite; }
@@ -94,6 +125,15 @@ button {
 .animate-shake { animation: shake 0.3s ease-in-out; }
 .animate-heartbeat { animation: heartbeat 0.8s ease-in-out infinite; }
 .animate-wobble-fast { animation: wobble-fast 0.3s ease-in-out infinite; }
+.animate-run-bob { animation: run-bob 0.72s ease-in-out infinite; }
+.animate-sprint { animation: sprint 0.28s ease-in-out infinite; }
+.animate-celebrate-pop { animation: celebrate-pop 0.82s ease-in-out infinite; }
+.animate-twinkle { animation: twinkle 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.animate-twinkle-delayed { animation: twinkle 2.4s 0.9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.animate-confetti-fall { animation: confetti-fall 1.6s ease-in-out infinite; }
+.animate-confetti-fall-delayed { animation: confetti-fall 1.8s 0.35s ease-in-out infinite; }
+.animate-ribbon-sway { animation: ribbon-sway 1.2s ease-in-out infinite; }
+.animate-ribbon-sway-delayed { animation: ribbon-sway 1.2s 0.4s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *,

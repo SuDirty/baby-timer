@@ -8,10 +8,10 @@ import {
   ANIMAL_RELAY_INTERVAL_SECONDS,
   DEFAULT_MINUTES,
   MAX_COMPANION_ANIMALS,
-  RUNNER_ANIMALS,
   TIMER_CACHE_KEY,
   clampMinutes,
 } from './constants';
+import { runnerAnimalIds } from './assets/visualAssets';
 import { useAudioAlerts } from './hooks/useAudioAlerts';
 import { useIdleMode } from './hooks/useIdleMode';
 import { useTimer } from './hooks/useTimer';
@@ -35,8 +35,8 @@ const createChallenge = () => {
 };
 
 const getRandomAnimal = (excludedAnimals = []) => {
-  const candidates = RUNNER_ANIMALS.filter((animal) => !excludedAnimals.includes(animal));
-  const pool = candidates.length > 0 ? candidates : RUNNER_ANIMALS;
+  const candidates = runnerAnimalIds.filter((animal) => !excludedAnimals.includes(animal));
+  const pool = candidates.length > 0 ? candidates : runnerAnimalIds;
   return pool[Math.floor(Math.random() * pool.length)];
 };
 
@@ -46,12 +46,12 @@ const createAnimalTeam = () => ({
 });
 
 const sanitizeAnimalTeam = (animalTeam) => {
-  const currentAnimal = RUNNER_ANIMALS.includes(animalTeam?.currentAnimal)
+  const currentAnimal = runnerAnimalIds.includes(animalTeam?.currentAnimal)
     ? animalTeam.currentAnimal
     : getRandomAnimal();
   const companionAnimals = Array.isArray(animalTeam?.companionAnimals)
     ? animalTeam.companionAnimals
-      .filter((animal) => RUNNER_ANIMALS.includes(animal) && animal !== currentAnimal)
+      .filter((animal) => runnerAnimalIds.includes(animal) && animal !== currentAnimal)
       .slice(0, MAX_COMPANION_ANIMALS)
     : [];
 

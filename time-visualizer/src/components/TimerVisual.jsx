@@ -7,6 +7,7 @@ import {
   SECOND_RING_STROKE_WIDTH,
   SVG_CENTER,
 } from '../constants';
+import { animalAssets, decorAssets } from '../assets/visualAssets';
 
 const getPiePath = (cx, cy, radius, startAngle, endAngle) => {
   const start = (startAngle - 90) * (Math.PI / 180);
@@ -35,6 +36,12 @@ const getOrbitPosition = (seconds, radius, offsetDegrees = 0) => {
   };
 };
 
+const AssetImage = ({ className = '', src, alt = '', ...props }) => (
+  <img className={`select-none object-contain ${className}`} src={src} alt={alt} draggable="false" {...props} />
+);
+
+const getAnimalSrc = (animalId) => animalAssets[animalId] ?? animalAssets.turtle;
+
 const ClockFace = ({ now, formatClockTime }) => {
   const secondsProgress = now.getSeconds() / 60;
   const secondsCircumference = 2 * Math.PI * BASE_RADIUS;
@@ -42,6 +49,12 @@ const ClockFace = ({ now, formatClockTime }) => {
 
   return (
     <>
+      <g opacity="0.95">
+        <image href={decorAssets.crescentMoon} x="46" y="34" width="44" height="44" className="animate-float-slow" />
+        <image href={decorAssets.star} x="230" y="46" width="28" height="28" className="animate-twinkle" />
+        <image href={decorAssets.star} x="82" y="238" width="20" height="20" className="animate-twinkle-delayed" />
+        <image href={decorAssets.cloud} x="208" y="218" width="56" height="56" className="animate-float-medium" opacity="0.72" />
+      </g>
       <circle cx={SVG_CENTER.x} cy={SVG_CENTER.y} r={BASE_RADIUS} fill="#1e293b" stroke="#334155" strokeWidth="4" />
       <circle
         cx={SVG_CENTER.x}
@@ -167,9 +180,7 @@ const CompanionAnimals = ({ animals, timeLeft }) => animals.map((animal, index) 
       height={emojiSize}
     >
       <div className="flex h-full w-full items-center justify-center">
-        <div className="animate-wobble-fast opacity-80" style={{ fontSize: `${emojiSize * 0.72}px`, lineHeight: 1 }}>
-          {animal}
-        </div>
+        <AssetImage className="h-full w-full animate-run-bob opacity-80 drop-shadow-sm" src={getAnimalSrc(animal)} />
       </div>
     </foreignObject>
   );
@@ -187,23 +198,33 @@ const TimerCharacter = ({ animalTeam, isFinished, isRunning, isUrgent, showSetup
     emojiY = position.y - emojiSize / 2;
   }
 
+  const animalSrc = getAnimalSrc(animalTeam.currentAnimal);
+
   return (
     <>
       {!isFinished && !showSetup && timeLeft > 0 && (
         <CompanionAnimals animals={animalTeam.companionAnimals} timeLeft={timeLeft} />
       )}
       <foreignObject x={emojiX} y={emojiY} width={emojiSize} height={emojiSize}>
-        <div className="flex h-full w-full flex-col items-center justify-center">
+        <div className="relative flex h-full w-full flex-col items-center justify-center">
           {isFinished ? (
-            <div className="text-6xl animate-spin-slow">🎉</div>
+            <AssetImage className="h-20 w-20 animate-celebrate-pop drop-shadow-md" src={decorAssets.partyPopper} />
           ) : isRunning ? (
             isUrgent ? (
-              <div className="text-7xl animate-wobble-fast">{animalTeam.currentAnimal}</div>
+              <>
+                <span className="absolute left-11 top-[5.2rem] h-3 w-16 rounded-full bg-red-300/50 blur-sm" />
+                <AssetImage className="h-24 w-24 animate-sprint drop-shadow-md" src={animalSrc} />
+              </>
             ) : (
-              <div className="text-6xl animate-pulse">{animalTeam.currentAnimal}</div>
+              <AssetImage className="h-20 w-20 animate-run-bob drop-shadow-md" src={animalSrc} />
             )
           ) : (
-            <div className="text-6xl opacity-80">😴</div>
+            <>
+              <AssetImage className="h-20 w-20 opacity-75 drop-shadow-md saturate-[0.85]" src={animalSrc} />
+              <AssetImage className="absolute right-12 top-10 h-8 w-8 animate-float-slow opacity-90" src={decorAssets.crescentMoon} />
+              <span className="absolute right-10 top-6 font-mono text-lg font-bold text-slate-400">Z</span>
+              <span className="absolute right-6 top-2 font-mono text-sm font-bold text-slate-300">Z</span>
+            </>
           )}
         </div>
       </foreignObject>
@@ -226,7 +247,14 @@ const TimerVisual = ({
   <div className="relative mb-8 flex aspect-square max-w-full items-center justify-center" style={{ width: 'min(80vw, 20rem)' }}>
     {isFinished && !isIdleMode && (
       <div className="absolute inset-0 z-20 flex animate-bounce flex-col items-center justify-center">
-        <span className="text-6xl">🎉</span>
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <AssetImage className="absolute left-12 top-8 h-10 w-10 animate-confetti-fall" src={decorAssets.star} />
+          <AssetImage className="absolute right-10 top-12 h-12 w-12 animate-confetti-fall-delayed" src={decorAssets.partyPopper} />
+          <span className="absolute left-16 top-24 h-3 w-10 rotate-12 rounded-full bg-pink-400 animate-ribbon-sway" />
+          <span className="absolute right-16 top-24 h-3 w-12 -rotate-12 rounded-full bg-sky-400 animate-ribbon-sway-delayed" />
+          <span className="absolute left-24 bottom-20 h-3 w-10 -rotate-6 rounded-full bg-emerald-400 animate-ribbon-sway-delayed" />
+        </div>
+        <AssetImage className="h-16 w-16 animate-celebrate-pop drop-shadow-md" src={decorAssets.partyPopper} />
         <span className="mt-2 rounded-full bg-white/80 px-4 py-1 text-2xl font-bold text-slate-700 shadow-sm">
           時間到囉！
         </span>
