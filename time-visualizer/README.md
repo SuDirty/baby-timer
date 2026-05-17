@@ -1,16 +1,28 @@
-# React + Vite
+# 時間小精靈
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一個給孩子使用的視覺化倒數計時器。它用色塊、秒圈、角色動畫和音效提示時間流逝，並提供兒童鎖與家長數學驗證。
 
-Currently, two official plugins are available:
+## 功能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 視覺化倒數：一小時內用圓形色塊呈現，超過一小時會加外圈。
+- 精準計時：用目標結束時間校正剩餘秒數，減少瀏覽器卡頓造成的時間漂移。
+- 時間提醒：15 分鐘、5 分鐘、3 分鐘、1 分鐘和結束時播放不同音效。
+- 兒童鎖：鎖定後隱藏控制按鈕，解鎖需要完成乘法題。
+- 閒置時鐘：未倒數且閒置一段時間後切換成時鐘模式。
+- 快速參數：網址可加 `?min=25` 直接設定 25 分鐘。
 
-## React Compiler
+## 開發
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+## 驗證
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm run lint
+npm run build
+```
+
+倒數分鐘會限制在 1 到 180 分鐘之間。
