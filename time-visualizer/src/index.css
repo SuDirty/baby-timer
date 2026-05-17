@@ -85,13 +85,13 @@ button {
 }
 
 @keyframes run-bob {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50% { transform: translateY(-6px) rotate(3deg); }
+  0%, 100% { transform: translateY(0) scaleX(var(--runner-direction, 1)) rotate(-2deg); }
+  50% { transform: translateY(-6px) scaleX(var(--runner-direction, 1)) rotate(3deg); }
 }
 
 @keyframes sprint {
-  0%, 100% { transform: translateX(-3px) rotate(-8deg) scale(1.03); }
-  50% { transform: translateX(5px) rotate(8deg) scale(1.08); }
+  0%, 100% { transform: translateX(-3px) scaleX(var(--runner-direction, 1)) rotate(-8deg) scale(1.03); }
+  50% { transform: translateX(5px) scaleX(var(--runner-direction, 1)) rotate(8deg) scale(1.08); }
 }
 
 @keyframes celebrate-pop {

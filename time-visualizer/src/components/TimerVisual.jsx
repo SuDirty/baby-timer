@@ -31,13 +31,26 @@ const getOrbitPosition = (seconds, radius, offsetDegrees = 0) => {
   const angleRadians = (angleDegrees - 90) * (Math.PI / 180);
 
   return {
+    angleDegrees,
     x: SVG_CENTER.x + radius * Math.cos(angleRadians),
     y: SVG_CENTER.y + radius * Math.sin(angleRadians),
   };
 };
 
-const AssetImage = ({ className = '', src, alt = '', ...props }) => (
-  <img className={`select-none object-contain ${className}`} src={src} alt={alt} draggable="false" {...props} />
+const getDirectionScale = (angleDegrees) => {
+  const normalizedAngle = ((angleDegrees % 360) + 360) % 360;
+  return normalizedAngle > 0 && normalizedAngle < 180 ? 1 : -1;
+};
+
+const AssetImage = ({ className = '', direction = 1, src, alt = '', style, ...props }) => (
+  <img
+    className={`select-none object-contain ${className}`}
+    src={src}
+    alt={alt}
+    draggable="false"
+    style={{ '--runner-direction': direction, ...style }}
+    {...props}
+  />
 );
 
 const getAnimalSrc = (animalId) => animalAssets[animalId] ?? animalAssets.turtle;
@@ -180,7 +193,11 @@ const CompanionAnimals = ({ animals, timeLeft }) => animals.map((animal, index) 
       height={emojiSize}
     >
       <div className="flex h-full w-full items-center justify-center">
-        <AssetImage className="h-full w-full animate-run-bob opacity-80 drop-shadow-sm" src={getAnimalSrc(animal)} />
+        <AssetImage
+          className="h-full w-full animate-run-bob opacity-80 drop-shadow-sm"
+          direction={getDirectionScale(position.angleDegrees)}
+          src={getAnimalSrc(animal)}
+        />
       </div>
     </foreignObject>
   );
@@ -199,6 +216,7 @@ const TimerCharacter = ({ animalTeam, isFinished, isRunning, isUrgent, showSetup
   }
 
   const animalSrc = getAnimalSrc(animalTeam.currentAnimal);
+  const direction = getDirectionScale(getOrbitPosition(timeLeft, SECOND_RING_RADIUS).angleDegrees);
 
   return (
     <>
@@ -213,10 +231,10 @@ const TimerCharacter = ({ animalTeam, isFinished, isRunning, isUrgent, showSetup
             isUrgent ? (
               <>
                 <span className="absolute left-11 top-[5.2rem] h-3 w-16 rounded-full bg-red-300/50 blur-sm" />
-                <AssetImage className="h-24 w-24 animate-sprint drop-shadow-md" src={animalSrc} />
+                <AssetImage className="h-24 w-24 animate-sprint drop-shadow-md" direction={direction} src={animalSrc} />
               </>
             ) : (
-              <AssetImage className="h-20 w-20 animate-run-bob drop-shadow-md" src={animalSrc} />
+              <AssetImage className="h-20 w-20 animate-run-bob drop-shadow-md" direction={direction} src={animalSrc} />
             )
           ) : (
             <>
