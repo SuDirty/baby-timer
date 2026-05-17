@@ -7,7 +7,6 @@ import UnlockChallenge from './components/UnlockChallenge';
 import {
   ANIMAL_RELAY_INTERVAL_SECONDS,
   DEFAULT_MINUTES,
-  MAX_COMPANION_ANIMALS,
   TIMER_CACHE_KEY,
   clampMinutes,
 } from './constants';
@@ -40,41 +39,18 @@ const getRandomAnimal = (excludedAnimals = []) => {
   return pool[Math.floor(Math.random() * pool.length)];
 };
 
-const createAnimalTeam = () => ({
-  currentAnimal: getRandomAnimal(),
-  companionAnimals: [],
-});
+const sanitizeRunnerAnimal = (animalId) => (
+  runnerAnimalIds.includes(animalId) ? animalId : getRandomAnimal()
+);
 
-const sanitizeAnimalTeam = (animalTeam) => {
-  const currentAnimal = runnerAnimalIds.includes(animalTeam?.currentAnimal)
-    ? animalTeam.currentAnimal
-    : getRandomAnimal();
-  const companionAnimals = Array.isArray(animalTeam?.companionAnimals)
-    ? animalTeam.companionAnimals
-      .filter((animal) => runnerAnimalIds.includes(animal) && animal !== currentAnimal)
-      .slice(0, MAX_COMPANION_ANIMALS)
-    : [];
-
-  return { currentAnimal, companionAnimals };
-};
-
-const advanceAnimalTeam = (animalTeam) => {
-  const nextCompanions = [animalTeam.currentAnimal, ...animalTeam.companionAnimals].slice(0, MAX_COMPANION_ANIMALS);
-
-  return {
-    currentAnimal: getRandomAnimal([animalTeam.currentAnimal, ...nextCompanions]),
-    companionAnimals: nextCompanions,
-  };
-};
-
-const advanceAnimalTeamBy = (animalTeam, steps) => {
-  let nextAnimalTeam = animalTeam;
+const advanceRunnerAnimalBy = (animalId, steps) => {
+  let nextAnimal = sanitizeRunnerAnimal(animalId);
 
   for (let i = 0; i < steps; i += 1) {
-    nextAnimalTeam = advanceAnimalTeam(nextAnimalTeam);
+    nextAnimal = getRandomAnimal([nextAnimal]);
   }
 
-  return nextAnimalTeam;
+  return nextAnimal;
 };
 
 const getCachedRelayCount = (timerSnapshot) => {
@@ -88,17 +64,15 @@ const getCachedRelayCount = (timerSnapshot) => {
   return Math.floor(Math.max(0, totalTime - timeLeft) / ANIMAL_RELAY_INTERVAL_SECONDS);
 };
 
-const restoreAnimalTeam = (cachedState) => {
+const restoreRunnerAnimal = (cachedState) => {
   const currentRelayCount = getCachedRelayCount(cachedState.timer);
-  const cachedRelayCount = Number.isFinite(Number(cachedState.animalTeam?.relayCount))
-    ? Number(cachedState.animalTeam.relayCount)
+  const cachedRelayCount = Number.isFinite(Number(cachedState.runnerRelayCount))
+    ? Number(cachedState.runnerRelayCount)
     : 0;
-  let animalTeam = sanitizeAnimalTeam(cachedState.animalTeam);
-
-  animalTeam = advanceAnimalTeamBy(animalTeam, Math.max(0, currentRelayCount - cachedRelayCount));
+  const runnerAnimal = advanceRunnerAnimalBy(cachedState.runnerAnimal, Math.max(0, currentRelayCount - cachedRelayCount));
 
   return {
-    animalTeam,
+    runnerAnimal,
     relayCount: currentRelayCount,
   };
 };
@@ -126,7 +100,7 @@ const TimeVisualizer = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [hasLoadedCachedState, setHasLoadedCachedState] = useState(false);
-  const [animalTeam, setAnimalTeam] = useState(() => createAnimalTeam());
+  const [runnerAnimal, setRunnerAnimal] = useState(() => getRandomAnimal());
   const [showUnlockChallenge, setShowUnlockChallenge] = useState(false);
   const [challenge, setChallenge] = useState(() => createChallenge());
   const [inputAnswer, setInputAnswer] = useState('');
@@ -176,10 +150,10 @@ const TimeVisualizer = () => {
         setShowSetup(typeof cachedState.showSetup === 'boolean' ? cachedState.showSetup : true);
         setIsLocked(Boolean(cachedState.isLocked));
         setIsMuted(Boolean(cachedState.isMuted));
-        const restoredAnimalTeam = restoreAnimalTeam(cachedState);
-        setAnimalTeam(restoredAnimalTeam.animalTeam);
+        const restoredRunnerAnimal = restoreRunnerAnimal(cachedState);
+        setRunnerAnimal(restoredRunnerAnimal.runnerAnimal);
         restore(cachedState.timer);
-        lastRelayCountRef.current = restoredAnimalTeam.relayCount;
+        lastRelayCountRef.current = restoredRunnerAnimal.relayCount;
       }
 
       setHasLoadedCachedState(true);
@@ -190,8 +164,7 @@ const TimeVisualizer = () => {
     setSetupMinutes(minutes);
     setDuration(minutes * 60);
     setShowSetup(false);
-    const nextAnimalTeam = createAnimalTeam();
-    setAnimalTeam(nextAnimalTeam);
+    setRunnerAnimal(getRandomAnimal());
     lastRelayCountRef.current = 0;
     setHasLoadedCachedState(true);
   }, [restore, setDuration]);
@@ -204,13 +177,11 @@ const TimeVisualizer = () => {
       showSetup,
       isLocked,
       isMuted,
-      animalTeam: {
-        ...animalTeam,
-        relayCount: lastRelayCountRef.current,
-      },
+      runnerAnimal,
+      runnerRelayCount: lastRelayCountRef.current,
       timer: getSnapshot(),
     });
-  }, [animalTeam, getSnapshot, hasLoadedCachedState, isLocked, isMuted, setupMinutes, showSetup, timeLeft]);
+  }, [getSnapshot, hasLoadedCachedState, isLocked, isMuted, runnerAnimal, setupMinutes, showSetup, timeLeft]);
 
   useEffect(() => {
     if (!isRunning || showSetup || timeLeft <= 0) return;
@@ -220,7 +191,7 @@ const TimeVisualizer = () => {
 
     const relaySteps = relayCount - lastRelayCountRef.current;
     lastRelayCountRef.current = relayCount;
-    setAnimalTeam((currentAnimalTeam) => advanceAnimalTeamBy(currentAnimalTeam, relaySteps));
+    setRunnerAnimal((currentAnimal) => advanceRunnerAnimalBy(currentAnimal, relaySteps));
   }, [isRunning, showSetup, timeLeft, totalTime]);
 
   useEffect(() => {
@@ -233,14 +204,14 @@ const TimeVisualizer = () => {
     setDuration(duration);
     setShowSetup(false);
     setIsLocked(false);
-    setAnimalTeam(createAnimalTeam());
+    setRunnerAnimal(getRandomAnimal());
     lastRelayCountRef.current = 0;
     start(duration);
   };
 
   const handleReset = () => {
     reset();
-    setAnimalTeam(createAnimalTeam());
+    setRunnerAnimal(getRandomAnimal());
     lastRelayCountRef.current = 0;
     resetIdleTimer();
   };
@@ -327,7 +298,7 @@ const TimeVisualizer = () => {
           showSetup={showSetup}
           timeLeft={timeLeft}
           totalTime={totalTime}
-          animalTeam={animalTeam}
+          runnerAnimal={runnerAnimal}
         />
 
         {!isIdleMode && (

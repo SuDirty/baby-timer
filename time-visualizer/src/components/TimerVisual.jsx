@@ -180,30 +180,7 @@ const TimerRings = ({ totalTime, timeLeft, isUrgent }) => {
   return rings;
 };
 
-const CompanionAnimals = ({ animals, timeLeft }) => animals.map((animal, index) => {
-  const emojiSize = Math.max(42, 58 - index * 4);
-  const position = getOrbitPosition(timeLeft, SECOND_RING_RADIUS, (index + 1) * 18);
-
-  return (
-    <foreignObject
-      key={`${animal}-${index}`}
-      x={position.x - emojiSize / 2}
-      y={position.y - emojiSize / 2}
-      width={emojiSize}
-      height={emojiSize}
-    >
-      <div className="flex h-full w-full items-center justify-center">
-        <AssetImage
-          className="h-full w-full animate-run-bob opacity-80 drop-shadow-sm"
-          direction={getDirectionScale(position.angleDegrees)}
-          src={getAnimalSrc(animal)}
-        />
-      </div>
-    </foreignObject>
-  );
-});
-
-const TimerCharacter = ({ animalTeam, isFinished, isRunning, isUrgent, showSetup, timeLeft }) => {
+const TimerCharacter = ({ isFinished, isRunning, isUrgent, runnerAnimal, showSetup, timeLeft }) => {
   const emojiSize = 200;
   let emojiX = 60;
   let emojiY = 60;
@@ -215,38 +192,33 @@ const TimerCharacter = ({ animalTeam, isFinished, isRunning, isUrgent, showSetup
     emojiY = position.y - emojiSize / 2;
   }
 
-  const animalSrc = getAnimalSrc(animalTeam.currentAnimal);
+  const animalSrc = getAnimalSrc(runnerAnimal);
   const direction = getDirectionScale(getOrbitPosition(timeLeft, SECOND_RING_RADIUS).angleDegrees);
 
   return (
-    <>
-      {!isFinished && !showSetup && timeLeft > 0 && (
-        <CompanionAnimals animals={animalTeam.companionAnimals} timeLeft={timeLeft} />
-      )}
-      <foreignObject x={emojiX} y={emojiY} width={emojiSize} height={emojiSize}>
-        <div className="relative flex h-full w-full flex-col items-center justify-center">
-          {isFinished ? (
-            <AssetImage className="h-20 w-20 animate-celebrate-pop drop-shadow-md" src={decorAssets.partyPopper} />
-          ) : isRunning ? (
-            isUrgent ? (
-              <>
-                <span className="absolute left-11 top-[5.2rem] h-3 w-16 rounded-full bg-red-300/50 blur-sm" />
-                <AssetImage className="h-24 w-24 animate-sprint drop-shadow-md" direction={direction} src={animalSrc} />
-              </>
-            ) : (
-              <AssetImage className="h-20 w-20 animate-run-bob drop-shadow-md" direction={direction} src={animalSrc} />
-            )
-          ) : (
+    <foreignObject x={emojiX} y={emojiY} width={emojiSize} height={emojiSize}>
+      <div className="relative flex h-full w-full flex-col items-center justify-center">
+        {isFinished ? (
+          <AssetImage className="h-20 w-20 animate-celebrate-pop drop-shadow-md" src={decorAssets.partyPopper} />
+        ) : isRunning ? (
+          isUrgent ? (
             <>
-              <AssetImage className="h-20 w-20 opacity-75 drop-shadow-md saturate-[0.85]" src={animalSrc} />
-              <AssetImage className="absolute right-12 top-10 h-8 w-8 animate-float-slow opacity-90" src={decorAssets.crescentMoon} />
-              <span className="absolute right-10 top-6 font-mono text-lg font-bold text-slate-400">Z</span>
-              <span className="absolute right-6 top-2 font-mono text-sm font-bold text-slate-300">Z</span>
+              <span className="absolute left-11 top-[5.2rem] h-3 w-16 rounded-full bg-red-300/50 blur-sm" />
+              <AssetImage className="h-24 w-24 animate-sprint drop-shadow-md" direction={direction} src={animalSrc} />
             </>
-          )}
-        </div>
-      </foreignObject>
-    </>
+          ) : (
+            <AssetImage className="h-20 w-20 animate-run-bob drop-shadow-md" direction={direction} src={animalSrc} />
+          )
+        ) : (
+          <>
+            <AssetImage className="h-20 w-20 opacity-75 drop-shadow-md saturate-[0.85]" src={animalSrc} />
+            <AssetImage className="absolute right-12 top-10 h-8 w-8 animate-float-slow opacity-90" src={decorAssets.crescentMoon} />
+            <span className="absolute right-10 top-6 font-mono text-lg font-bold text-slate-400">Z</span>
+            <span className="absolute right-6 top-2 font-mono text-sm font-bold text-slate-300">Z</span>
+          </>
+        )}
+      </div>
+    </foreignObject>
   );
 };
 
@@ -260,7 +232,7 @@ const TimerVisual = ({
   showSetup,
   timeLeft,
   totalTime,
-  animalTeam,
+  runnerAnimal,
 }) => (
   <div className="relative mb-8 flex aspect-square max-w-full items-center justify-center" style={{ width: 'min(80vw, 20rem)' }}>
     {isFinished && !isIdleMode && (
@@ -285,7 +257,7 @@ const TimerVisual = ({
       ) : (
         <>
           <TimerRings totalTime={totalTime} timeLeft={timeLeft} isUrgent={isUrgent} />
-          <TimerCharacter animalTeam={animalTeam} isFinished={isFinished} isRunning={isRunning} isUrgent={isUrgent} showSetup={showSetup} timeLeft={timeLeft} />
+          <TimerCharacter isFinished={isFinished} isRunning={isRunning} isUrgent={isUrgent} runnerAnimal={runnerAnimal} showSetup={showSetup} timeLeft={timeLeft} />
         </>
       )}
     </svg>

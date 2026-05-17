@@ -3,7 +3,6 @@ export const MIN_MINUTES = 1;
 export const MAX_MINUTES = 180;
 export const IDLE_TIMEOUT_MS = 30000;
 export const TIMER_CACHE_KEY = 'time-visualizer:timer-state:v1';
-export const MAX_COMPANION_ANIMALS = 5;
 export const ANIMAL_RELAY_INTERVAL_SECONDS = 60;
 
 export const SVG_CENTER = { x: 160, y: 160 };
