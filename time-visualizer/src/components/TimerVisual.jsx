@@ -39,7 +39,7 @@ const getOrbitPosition = (seconds, radius, offsetDegrees = 0) => {
 
 const getDirectionScale = (angleDegrees) => {
   const normalizedAngle = ((angleDegrees % 360) + 360) % 360;
-  return normalizedAngle > 0 && normalizedAngle < 180 ? 1 : -1;
+  return normalizedAngle > 90 && normalizedAngle < 270 ? 1 : -1;
 };
 
 const AssetImage = ({ className = '', direction = 1, src, alt = '', style, ...props }) => (
@@ -182,7 +182,7 @@ const TimerRings = ({ totalTime, timeLeft, isUrgent }) => {
 
 const CompanionAnimals = ({ animals, timeLeft }) => animals.map((animal, index) => {
   const emojiSize = Math.max(42, 58 - index * 4);
-  const position = getOrbitPosition(timeLeft, SECOND_RING_RADIUS, -(index + 1) * 18);
+  const position = getOrbitPosition(timeLeft, SECOND_RING_RADIUS, (index + 1) * 18);
 
   return (
     <foreignObject
