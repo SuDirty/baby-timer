@@ -34,7 +34,21 @@ const createChallenge = () => {
   return { q: `${a} × ${b} = ?`, answer: a * b };
 };
 
-const SURPRISE_EVENTS = ['cat-rain', 'elephant-migration', 'star-burst'];
+const SURPRISE_EVENTS = [
+  'cat-rain',
+  'elephant-migration',
+  'star-burst',
+  'dog-parade',
+  'rabbit-hop',
+  'butterfly-flutter',
+  'penguin-slide',
+  'turtle-march',
+  'unicorn-sparkle',
+  'cloud-sun',
+  'sloth-float',
+  'safari-stampede',
+  'owl-night',
+];
 const SURPRISE_EVENT_CHANCE = 0.45;
 const SURPRISE_EVENT_DURATION_MS = 3600;
 
