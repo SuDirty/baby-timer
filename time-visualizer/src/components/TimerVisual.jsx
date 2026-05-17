@@ -25,6 +25,16 @@ const getEffectiveSeconds = (timeLeft) => {
   return secondsValue === 0 ? 60 : secondsValue;
 };
 
+const getOrbitPosition = (seconds, radius, offsetDegrees = 0) => {
+  const angleDegrees = (getEffectiveSeconds(seconds) / 60) * 360 + offsetDegrees;
+  const angleRadians = (angleDegrees - 90) * (Math.PI / 180);
+
+  return {
+    x: SVG_CENTER.x + radius * Math.cos(angleRadians),
+    y: SVG_CENTER.y + radius * Math.sin(angleRadians),
+  };
+};
+
 const ClockFace = ({ now, formatClockTime }) => {
   const secondsProgress = now.getSeconds() / 60;
   const secondsCircumference = 2 * Math.PI * BASE_RADIUS;
@@ -144,37 +154,60 @@ const TimerRings = ({ totalTime, timeLeft, isUrgent }) => {
   return rings;
 };
 
-const TimerCharacter = ({ isFinished, isRunning, isUrgent, showSetup, timeLeft }) => {
+const CompanionAnimals = ({ animals, timeLeft }) => animals.map((animal, index) => {
+  const emojiSize = Math.max(42, 58 - index * 4);
+  const position = getOrbitPosition(timeLeft, SECOND_RING_RADIUS, -(index + 1) * 18);
+
+  return (
+    <foreignObject
+      key={`${animal}-${index}`}
+      x={position.x - emojiSize / 2}
+      y={position.y - emojiSize / 2}
+      width={emojiSize}
+      height={emojiSize}
+    >
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="animate-wobble-fast opacity-80" style={{ fontSize: `${emojiSize * 0.72}px`, lineHeight: 1 }}>
+          {animal}
+        </div>
+      </div>
+    </foreignObject>
+  );
+});
+
+const TimerCharacter = ({ animalTeam, isFinished, isRunning, isUrgent, showSetup, timeLeft }) => {
   const emojiSize = 200;
   let emojiX = 60;
   let emojiY = 60;
 
   if (!showSetup && timeLeft > 0) {
-    const angleDegrees = (getEffectiveSeconds(timeLeft) / 60) * 360;
-    const angleRadians = (angleDegrees - 90) * (Math.PI / 180);
-    const emojiCenterX = SVG_CENTER.x + SECOND_RING_RADIUS * Math.cos(angleRadians);
-    const emojiCenterY = SVG_CENTER.y + SECOND_RING_RADIUS * Math.sin(angleRadians);
+    const position = getOrbitPosition(timeLeft, SECOND_RING_RADIUS);
 
-    emojiX = emojiCenterX - emojiSize / 2;
-    emojiY = emojiCenterY - emojiSize / 2;
+    emojiX = position.x - emojiSize / 2;
+    emojiY = position.y - emojiSize / 2;
   }
 
   return (
-    <foreignObject x={emojiX} y={emojiY} width={emojiSize} height={emojiSize}>
-      <div className="flex h-full w-full flex-col items-center justify-center">
-        {isFinished ? (
-          <div className="text-6xl animate-spin-slow">🐰</div>
-        ) : isRunning ? (
-          isUrgent ? (
-            <div className="text-7xl animate-wobble-fast">🏃</div>
+    <>
+      {!isFinished && !showSetup && timeLeft > 0 && (
+        <CompanionAnimals animals={animalTeam.companionAnimals} timeLeft={timeLeft} />
+      )}
+      <foreignObject x={emojiX} y={emojiY} width={emojiSize} height={emojiSize}>
+        <div className="flex h-full w-full flex-col items-center justify-center">
+          {isFinished ? (
+            <div className="text-6xl animate-spin-slow">🎉</div>
+          ) : isRunning ? (
+            isUrgent ? (
+              <div className="text-7xl animate-wobble-fast">{animalTeam.currentAnimal}</div>
+            ) : (
+              <div className="text-6xl animate-pulse">{animalTeam.currentAnimal}</div>
+            )
           ) : (
-            <div className="text-6xl animate-pulse">🐢</div>
-          )
-        ) : (
-          <div className="text-6xl opacity-80">😴</div>
-        )}
-      </div>
-    </foreignObject>
+            <div className="text-6xl opacity-80">😴</div>
+          )}
+        </div>
+      </foreignObject>
+    </>
   );
 };
 
@@ -188,6 +221,7 @@ const TimerVisual = ({
   showSetup,
   timeLeft,
   totalTime,
+  animalTeam,
 }) => (
   <div className="relative mb-8 flex aspect-square max-w-full items-center justify-center" style={{ width: 'min(80vw, 20rem)' }}>
     {isFinished && !isIdleMode && (
@@ -205,7 +239,7 @@ const TimerVisual = ({
       ) : (
         <>
           <TimerRings totalTime={totalTime} timeLeft={timeLeft} isUrgent={isUrgent} />
-          <TimerCharacter isFinished={isFinished} isRunning={isRunning} isUrgent={isUrgent} showSetup={showSetup} timeLeft={timeLeft} />
+          <TimerCharacter animalTeam={animalTeam} isFinished={isFinished} isRunning={isRunning} isUrgent={isUrgent} showSetup={showSetup} timeLeft={timeLeft} />
         </>
       )}
     </svg>

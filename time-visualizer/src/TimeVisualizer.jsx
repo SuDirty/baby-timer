@@ -1,10 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Clock, Lock, Pause, Play, RotateCcw, Settings, Unlock, Volume2, VolumeX } from 'lucide-react';
 import BackgroundSprites from './components/BackgroundSprites';
 import SetupPanel from './components/SetupPanel';
 import TimerVisual from './components/TimerVisual';
 import UnlockChallenge from './components/UnlockChallenge';
-import { DEFAULT_MINUTES, TIMER_CACHE_KEY, clampMinutes } from './constants';
+import {
+  ANIMAL_RELAY_INTERVAL_SECONDS,
+  DEFAULT_MINUTES,
+  MAX_COMPANION_ANIMALS,
+  RUNNER_ANIMALS,
+  TIMER_CACHE_KEY,
+  clampMinutes,
+} from './constants';
 import { useAudioAlerts } from './hooks/useAudioAlerts';
 import { useIdleMode } from './hooks/useIdleMode';
 import { useTimer } from './hooks/useTimer';
@@ -25,6 +32,75 @@ const createChallenge = () => {
   const a = Math.floor(Math.random() * 8) + 2;
   const b = Math.floor(Math.random() * 8) + 2;
   return { q: `${a} × ${b} = ?`, answer: a * b };
+};
+
+const getRandomAnimal = (excludedAnimals = []) => {
+  const candidates = RUNNER_ANIMALS.filter((animal) => !excludedAnimals.includes(animal));
+  const pool = candidates.length > 0 ? candidates : RUNNER_ANIMALS;
+  return pool[Math.floor(Math.random() * pool.length)];
+};
+
+const createAnimalTeam = () => ({
+  currentAnimal: getRandomAnimal(),
+  companionAnimals: [],
+});
+
+const sanitizeAnimalTeam = (animalTeam) => {
+  const currentAnimal = RUNNER_ANIMALS.includes(animalTeam?.currentAnimal)
+    ? animalTeam.currentAnimal
+    : getRandomAnimal();
+  const companionAnimals = Array.isArray(animalTeam?.companionAnimals)
+    ? animalTeam.companionAnimals
+      .filter((animal) => RUNNER_ANIMALS.includes(animal) && animal !== currentAnimal)
+      .slice(0, MAX_COMPANION_ANIMALS)
+    : [];
+
+  return { currentAnimal, companionAnimals };
+};
+
+const advanceAnimalTeam = (animalTeam) => {
+  const nextCompanions = [animalTeam.currentAnimal, ...animalTeam.companionAnimals].slice(0, MAX_COMPANION_ANIMALS);
+
+  return {
+    currentAnimal: getRandomAnimal([animalTeam.currentAnimal, ...nextCompanions]),
+    companionAnimals: nextCompanions,
+  };
+};
+
+const advanceAnimalTeamBy = (animalTeam, steps) => {
+  let nextAnimalTeam = animalTeam;
+
+  for (let i = 0; i < steps; i += 1) {
+    nextAnimalTeam = advanceAnimalTeam(nextAnimalTeam);
+  }
+
+  return nextAnimalTeam;
+};
+
+const getCachedRelayCount = (timerSnapshot) => {
+  const totalTime = Number(timerSnapshot?.totalTime) || 0;
+  const cachedTimeLeft = Number(timerSnapshot?.timeLeft) || 0;
+  const endTime = Number(timerSnapshot?.endTime);
+  const timeLeft = timerSnapshot?.isRunning && Number.isFinite(endTime)
+    ? Math.max(0, Math.ceil((endTime - Date.now()) / 1000))
+    : cachedTimeLeft;
+
+  return Math.floor(Math.max(0, totalTime - timeLeft) / ANIMAL_RELAY_INTERVAL_SECONDS);
+};
+
+const restoreAnimalTeam = (cachedState) => {
+  const currentRelayCount = getCachedRelayCount(cachedState.timer);
+  const cachedRelayCount = Number.isFinite(Number(cachedState.animalTeam?.relayCount))
+    ? Number(cachedState.animalTeam.relayCount)
+    : 0;
+  let animalTeam = sanitizeAnimalTeam(cachedState.animalTeam);
+
+  animalTeam = advanceAnimalTeamBy(animalTeam, Math.max(0, currentRelayCount - cachedRelayCount));
+
+  return {
+    animalTeam,
+    relayCount: currentRelayCount,
+  };
 };
 
 const readCachedTimerState = () => {
@@ -50,6 +126,7 @@ const TimeVisualizer = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [hasLoadedCachedState, setHasLoadedCachedState] = useState(false);
+  const [animalTeam, setAnimalTeam] = useState(() => createAnimalTeam());
   const [showUnlockChallenge, setShowUnlockChallenge] = useState(false);
   const [challenge, setChallenge] = useState(() => createChallenge());
   const [inputAnswer, setInputAnswer] = useState('');
@@ -85,6 +162,7 @@ const TimeVisualizer = () => {
   } = useIdleMode(isRunning);
 
   const isUrgent = isRunning && timeLeft <= 60 && timeLeft > 0;
+  const lastRelayCountRef = useRef(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -98,7 +176,10 @@ const TimeVisualizer = () => {
         setShowSetup(typeof cachedState.showSetup === 'boolean' ? cachedState.showSetup : true);
         setIsLocked(Boolean(cachedState.isLocked));
         setIsMuted(Boolean(cachedState.isMuted));
+        const restoredAnimalTeam = restoreAnimalTeam(cachedState);
+        setAnimalTeam(restoredAnimalTeam.animalTeam);
         restore(cachedState.timer);
+        lastRelayCountRef.current = restoredAnimalTeam.relayCount;
       }
 
       setHasLoadedCachedState(true);
@@ -109,6 +190,9 @@ const TimeVisualizer = () => {
     setSetupMinutes(minutes);
     setDuration(minutes * 60);
     setShowSetup(false);
+    const nextAnimalTeam = createAnimalTeam();
+    setAnimalTeam(nextAnimalTeam);
+    lastRelayCountRef.current = 0;
     setHasLoadedCachedState(true);
   }, [restore, setDuration]);
 
@@ -120,9 +204,24 @@ const TimeVisualizer = () => {
       showSetup,
       isLocked,
       isMuted,
+      animalTeam: {
+        ...animalTeam,
+        relayCount: lastRelayCountRef.current,
+      },
       timer: getSnapshot(),
     });
-  }, [getSnapshot, hasLoadedCachedState, isLocked, isMuted, setupMinutes, showSetup, timeLeft]);
+  }, [animalTeam, getSnapshot, hasLoadedCachedState, isLocked, isMuted, setupMinutes, showSetup, timeLeft]);
+
+  useEffect(() => {
+    if (!isRunning || showSetup || timeLeft <= 0) return;
+
+    const relayCount = Math.floor((totalTime - timeLeft) / ANIMAL_RELAY_INTERVAL_SECONDS);
+    if (relayCount <= lastRelayCountRef.current) return;
+
+    const relaySteps = relayCount - lastRelayCountRef.current;
+    lastRelayCountRef.current = relayCount;
+    setAnimalTeam((currentAnimalTeam) => advanceAnimalTeamBy(currentAnimalTeam, relaySteps));
+  }, [isRunning, showSetup, timeLeft, totalTime]);
 
   useEffect(() => {
     if (isFinished) resetIdleTimer();
@@ -134,11 +233,15 @@ const TimeVisualizer = () => {
     setDuration(duration);
     setShowSetup(false);
     setIsLocked(false);
+    setAnimalTeam(createAnimalTeam());
+    lastRelayCountRef.current = 0;
     start(duration);
   };
 
   const handleReset = () => {
     reset();
+    setAnimalTeam(createAnimalTeam());
+    lastRelayCountRef.current = 0;
     resetIdleTimer();
   };
 
@@ -224,6 +327,7 @@ const TimeVisualizer = () => {
           showSetup={showSetup}
           timeLeft={timeLeft}
           totalTime={totalTime}
+          animalTeam={animalTeam}
         />
 
         {!isIdleMode && (
