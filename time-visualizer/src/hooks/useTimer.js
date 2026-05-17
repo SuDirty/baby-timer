@@ -10,6 +10,10 @@ const ALERT_THRESHOLDS = new Map([
 
 const getRemainingSeconds = (endTime) => Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
 
+const getTriggeredThresholds = (secondsLeft) => new Set(
+  [...ALERT_THRESHOLDS.keys()].filter((threshold) => secondsLeft <= threshold)
+);
+
 export const useTimer = ({ onAlert, onFinish }) => {
   const initialSeconds = DEFAULT_MINUTES * 60;
   const [totalTime, setTotalTime] = useState(initialSeconds);
@@ -69,6 +73,42 @@ export const useTimer = ({ onAlert, onFinish }) => {
     triggeredAlertsRef.current = new Set();
   }, [totalTime]);
 
+  const restore = useCallback((snapshot) => {
+    const restoredTotalTime = Number(snapshot?.totalTime);
+    const restoredTimeLeft = Number(snapshot?.timeLeft);
+    const restoredEndTime = Number(snapshot?.endTime);
+    const total = Number.isFinite(restoredTotalTime) && restoredTotalTime > 0
+      ? restoredTotalTime
+      : initialSeconds;
+
+    let nextTimeLeft = Number.isFinite(restoredTimeLeft)
+      ? Math.min(total, Math.max(0, restoredTimeLeft))
+      : total;
+
+    if (snapshot?.isRunning && Number.isFinite(restoredEndTime)) {
+      nextTimeLeft = Math.min(total, getRemainingSeconds(restoredEndTime));
+    }
+
+    const shouldRun = Boolean(snapshot?.isRunning && nextTimeLeft > 0);
+    const shouldFinish = Boolean(snapshot?.isFinished || (snapshot?.isRunning && nextTimeLeft <= 0));
+
+    setTotalTime(total);
+    setTimeLeft(nextTimeLeft);
+    setIsRunning(shouldRun);
+    setIsFinished(shouldFinish);
+    timeLeftRef.current = nextTimeLeft;
+    endTimeRef.current = shouldRun ? restoredEndTime : null;
+    triggeredAlertsRef.current = getTriggeredThresholds(nextTimeLeft);
+  }, [initialSeconds]);
+
+  const getSnapshot = useCallback(() => ({
+    totalTime,
+    timeLeft: timeLeftRef.current,
+    isRunning,
+    isFinished,
+    endTime: endTimeRef.current,
+  }), [isFinished, isRunning, totalTime]);
+
   useEffect(() => {
     if (!isRunning || !endTimeRef.current) return undefined;
 
@@ -115,5 +155,7 @@ export const useTimer = ({ onAlert, onFinish }) => {
     pause,
     toggle,
     reset,
+    restore,
+    getSnapshot,
   };
 };

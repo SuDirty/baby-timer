@@ -2,6 +2,7 @@ export const DEFAULT_MINUTES = 10;
 export const MIN_MINUTES = 1;
 export const MAX_MINUTES = 180;
 export const IDLE_TIMEOUT_MS = 30000;
+export const TIMER_CACHE_KEY = 'time-visualizer:timer-state:v1';
 
 export const SVG_CENTER = { x: 160, y: 160 };
 export const BASE_RADIUS = 120;

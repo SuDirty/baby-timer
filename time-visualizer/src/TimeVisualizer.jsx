@@ -4,7 +4,7 @@ import BackgroundSprites from './components/BackgroundSprites';
 import SetupPanel from './components/SetupPanel';
 import TimerVisual from './components/TimerVisual';
 import UnlockChallenge from './components/UnlockChallenge';
-import { DEFAULT_MINUTES, clampMinutes } from './constants';
+import { DEFAULT_MINUTES, TIMER_CACHE_KEY, clampMinutes } from './constants';
 import { useAudioAlerts } from './hooks/useAudioAlerts';
 import { useIdleMode } from './hooks/useIdleMode';
 import { useTimer } from './hooks/useTimer';
@@ -27,11 +27,29 @@ const createChallenge = () => {
   return { q: `${a} × ${b} = ?`, answer: a * b };
 };
 
+const readCachedTimerState = () => {
+  try {
+    const rawState = window.localStorage.getItem(TIMER_CACHE_KEY);
+    return rawState ? JSON.parse(rawState) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedTimerState = (state) => {
+  try {
+    window.localStorage.setItem(TIMER_CACHE_KEY, JSON.stringify(state));
+  } catch {
+    // The timer still works if private browsing or storage limits block cache writes.
+  }
+};
+
 const TimeVisualizer = () => {
   const [showSetup, setShowSetup] = useState(true);
   const [setupMinutes, setSetupMinutes] = useState(DEFAULT_MINUTES);
   const [isLocked, setIsLocked] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [hasLoadedCachedState, setHasLoadedCachedState] = useState(false);
   const [showUnlockChallenge, setShowUnlockChallenge] = useState(false);
   const [challenge, setChallenge] = useState(() => createChallenge());
   const [inputAnswer, setInputAnswer] = useState('');
@@ -52,6 +70,8 @@ const TimeVisualizer = () => {
     pause,
     toggle,
     reset,
+    restore,
+    getSnapshot,
   } = useTimer({
     onAlert: playSoundEffect,
     onFinish: handleFinish,
@@ -69,13 +89,40 @@ const TimeVisualizer = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const minParam = params.get('min');
-    if (!minParam) return;
+    if (!minParam) {
+      const cachedState = readCachedTimerState();
+
+      if (cachedState) {
+        const minutes = clampMinutes(cachedState.setupMinutes);
+        setSetupMinutes(minutes);
+        setShowSetup(typeof cachedState.showSetup === 'boolean' ? cachedState.showSetup : true);
+        setIsLocked(Boolean(cachedState.isLocked));
+        setIsMuted(Boolean(cachedState.isMuted));
+        restore(cachedState.timer);
+      }
+
+      setHasLoadedCachedState(true);
+      return;
+    }
 
     const minutes = clampMinutes(minParam);
     setSetupMinutes(minutes);
     setDuration(minutes * 60);
     setShowSetup(false);
-  }, [setDuration]);
+    setHasLoadedCachedState(true);
+  }, [restore, setDuration]);
+
+  useEffect(() => {
+    if (!hasLoadedCachedState) return;
+
+    writeCachedTimerState({
+      setupMinutes,
+      showSetup,
+      isLocked,
+      isMuted,
+      timer: getSnapshot(),
+    });
+  }, [getSnapshot, hasLoadedCachedState, isLocked, isMuted, setupMinutes, showSetup, timeLeft]);
 
   useEffect(() => {
     if (isFinished) resetIdleTimer();
